@@ -1,0 +1,71 @@
+import numpy as np
+
+
+def classification100k(data_temp, transfo_temperature, dim):
+    """
+    Classifies pixels into temperature groups and assigns them one color per class.
+
+    Args:
+    - data_temp: The data extracted from the csv.
+    - transfo_temperature: The matrix of correspondences, temperature/color.
+    - dim: The dimension wanted for the image
+
+    Return:
+    - res: The function returns an array of RGB values which represents the initial image transformed into pyrometric color grouped by 100K.
+    """
+    # Initialization
+    res = np.zeros(dim)
+    erreurs = 0  # difference greater than 50K
+
+    # Treatment
+    for y in range(dim[0]):  # y
+        for x in range(dim[1]):  # x
+            if data_temp.iloc[1936 * y + x, 2] >= 1450:
+                res[y][x] = transfo_temperature[-1][1]
+
+            elif data_temp.iloc[1936 * y + x, 2] < 250:
+                res[y][x] = [255, 255, 255]
+
+            else:
+                ecart = 3000
+                temp = 0
+                k = 0
+                while k < len(transfo_temperature)-1:
+                    a = abs(transfo_temperature[k][0] - data_temp.iloc[1936 * y + x, 2])
+                    if a < ecart:
+                        ecart = a
+                        temp = k
+                        k += 1
+                    else:
+                        k = len(transfo_temperature)-1
+
+                res[y][x] = transfo_temperature[temp][1]
+    return res
+
+
+def mask100k(transfo_temperature, dim, classification):
+    """
+    Classifies pixels into temperature groups and assigns them one color per class.
+
+    Args:
+    - transfo_temperature: The matrix of correspondences, temperature/color.
+    - dim: The dimension wanted for the image
+    - classification: The array which contains the RGB image in pyrometric color classes
+
+    Return:
+    - masks: The array returned contains the matrix mask for each temperature
+    """
+    masks = []
+    for k in range(len(transfo_temperature)):
+        mask = np.zeros(dim)
+        for y in range(dim[0]):  # y
+            for x in range(dim[1]):
+                classe = classification[y][x]
+                trans = transfo_temperature[k][1]
+                if classe[0] == trans[0] and classe[1] == trans[1] and classe[2] == trans[2]:
+                    mask[y][x] = trans
+                else:
+                    mask[y][x] = [0, 0, 0]
+        mask = mask.astype(np.uint8)
+        masks.append([transfo_temperature[k][0], mask])
+    return masks
